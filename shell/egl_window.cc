@@ -67,13 +67,6 @@ EglWindow::EglWindow(size_t index,
   wl_display_roundtrip(m_display->GetDisplay());
   wl_surface_commit(m_base_surface);
 
-  m_egl_window[m_index] =
-      wl_egl_window_create(m_base_surface, m_geometry.width, m_geometry.height);
-  FML_DLOG(INFO) << "create egl_window: " << m_geometry.width << "x"
-                 << m_geometry.height;
-
-  m_egl_surface[m_index] =
-      create_egl_surface(this, m_egl_window[m_index], nullptr);
 
   memset(m_fps, 0, sizeof(m_fps));
   m_fps_idx = 0;
@@ -359,6 +352,20 @@ void EglWindow::handle_toplevel_configure(void* data,
     }
     wl_egl_window_resize(w->m_egl_window[w->m_index], w->m_geometry.width,
                          w->m_geometry.height, 0, 0);
+  } else {
+    w->m_egl_window[w->m_index] = wl_egl_window_create(
+        w->m_base_surface, w->m_geometry.width, w->m_geometry.height);
+
+    w->m_egl_surface[w->m_index] =
+        create_egl_surface(w, w->m_egl_window[w->m_index], nullptr);
+
+    if (w->m_flutter_engine) {
+      auto result = w->m_flutter_engine->SetWindowSize(w->m_geometry.height,
+                                                       w->m_geometry.width);
+      if (result != kSuccess) {
+        FML_LOG(ERROR) << "Failed to set Flutter Engine Window Size";
+      }
+    }
   }
 }
 
