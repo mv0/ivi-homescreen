@@ -29,7 +29,6 @@
 
 EglWindow::EglWindow(size_t index,
                      const std::shared_ptr<Display>& display,
-                     struct wl_surface* base_surface,
                      enum window_type type,
                      std::string app_id,
                      bool fullscreen,
@@ -39,7 +38,6 @@ EglWindow::EglWindow(size_t index,
     : Egl(display->GetDisplay(), debug_egl),
       m_index(index),
       m_display(display),
-      m_base_surface(base_surface),
       m_flutter_engine(nullptr),
       m_geometry({width, height}),
       m_type(type),
@@ -47,6 +45,9 @@ EglWindow::EglWindow(size_t index,
       m_fullscreen(fullscreen),
       m_frame_sync(0) {  // disable vsync
   FML_DLOG(INFO) << "+ EglWindow()";
+
+  m_base_surface = wl_compositor_create_surface(m_display->GetCompositor());
+  wl_surface_add_listener(m_base_surface, &base_surface_listener, this);
 
   m_fps_surface = wl_compositor_create_surface(m_display->GetCompositor());
   m_subsurface = wl_subcompositor_get_subsurface(m_display->GetSubCompositor(),
@@ -470,3 +471,47 @@ void EglWindow::SetEngine(const std::shared_ptr<Engine>& engine) {
     }
   }
 }
+
+void EglWindow::handle_base_surface_enter(void* data,
+                                          struct wl_surface* wl_surface,
+                                          struct wl_output* output) {
+  (void)wl_surface;
+  auto* w = static_cast<EglWindow*>(data);
+
+  for (auto& out : w->m_display->GetAllOutputs()) {
+    if (out->output == output) {
+      FML_DLOG(INFO) << "Entering output #" << out->global_id << ", scale "
+                     << out->scale;
+      w->m_display->SetLastBufferScale(w->m_display->GetBufferScale());
+      w->m_display->SetBufferScale(out->scale);
+      break;
+    }
+  }
+  if (w->m_display->BufferScaleEnable()) {
+    FML_DLOG(INFO) << "Setting buffer scale: "
+                   << w->m_display->GetBufferScale();
+    wl_surface_set_buffer_scale(w->m_base_surface,
+                                w->m_display->GetBufferScale());
+    wl_surface_commit(w->m_base_surface);
+  }
+}
+
+void EglWindow::handle_base_surface_leave(void* data,
+                                          struct wl_surface* wl_surface,
+                                          struct wl_output* output) {
+  (void)wl_surface;
+  auto* w = static_cast<EglWindow*>(data);
+
+  for (auto& out : w->m_display->GetAllOutputs()) {
+    if (out->output == output) {
+      FML_DLOG(INFO) << "Leaving output #" << out->global_id << ", scale "
+                     << out->scale;
+      break;
+    }
+  }
+}
+
+const struct wl_surface_listener EglWindow::base_surface_listener = {
+    .enter = handle_base_surface_enter,
+    .leave = handle_base_surface_leave,
+};

@@ -119,9 +119,6 @@ void Display::registry_handle_global(
                            &wl_compositor_interface,
                            std::min(static_cast<uint32_t>(2), version)));
     }
-    d->m_base_surface = wl_compositor_create_surface(d->m_compositor);
-    wl_surface_add_listener(d->m_base_surface,
-                            &base_surface_listener, d);
   }
 
   else if (strcmp(interface, wl_subcompositor_interface.name) == 0) {
@@ -764,45 +761,3 @@ bool Display::ActivateSystemCursor([[maybe_unused]] int32_t device,
 void Display::SetTextInput(std::shared_ptr<TextInput> text_input) {
   m_text_input = std::move(text_input);
 }
-
-void Display::handle_base_surface_enter(void* data,
-                                        struct wl_surface* wl_surface,
-                                        struct wl_output* output) {
-  (void)output;
-  (void)wl_surface;
-  auto* d = static_cast<Display*>(data);
-
-  for (auto& out : d->m_all_outputs) {
-    if (out->output == output) {
-      FML_DLOG(INFO) << "Entering output #" << out->global_id << ", scale "
-                     << out->scale;
-      d->m_last_buffer_scale = d->m_buffer_scale;
-      d->m_buffer_scale = out->scale;
-      break;
-    }
-  }
-  if (d->m_buffer_scale_enable) {
-    FML_DLOG(INFO) << "Setting buffer scale: " << d->m_buffer_scale;
-    wl_surface_set_buffer_scale(d->m_base_surface, d->m_buffer_scale);
-    wl_surface_commit(d->m_base_surface);
-  }
-}
-
-void Display::handle_base_surface_leave(void *data,
-                                        struct wl_surface *wl_surface,
-                                        struct wl_output *output) {
-  (void)wl_surface;
-  auto *d = static_cast<Display *>(data);
-
-  for (auto &out: d->m_all_outputs) {
-    if (out->output == output) {
-      FML_DLOG(INFO) << "Leaving output #" << out->global_id << ", scale " << out->scale;
-      break;
-    }
-  }
-}
-
-const struct wl_surface_listener Display::base_surface_listener = {
-    .enter = handle_base_surface_enter,
-    .leave = handle_base_surface_leave,
-};

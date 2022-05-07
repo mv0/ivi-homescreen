@@ -42,7 +42,6 @@ class EglWindow : public Egl {
 
   EglWindow(size_t index,
             const std::shared_ptr<Display>& display,
-            struct wl_surface* base_surface,
             enum window_type type,
             std::string app_id,
             bool fullscreen,
@@ -140,4 +139,14 @@ class EglWindow : public Egl {
   static void redraw(void* data, struct wl_callback* callback, uint32_t time);
 
   static const struct wl_callback_listener frame_listener;
+
+  static const struct wl_surface_listener base_surface_listener;
+
+  static void handle_base_surface_enter(void* data,
+                                        struct wl_surface* wl_surface,
+                                        struct wl_output* output);
+
+  static void handle_base_surface_leave(void* data,
+                                        struct wl_surface* wl_surface,
+                                        struct wl_output* output);
 };

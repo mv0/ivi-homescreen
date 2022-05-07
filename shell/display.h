@@ -60,16 +60,24 @@ class Display {
     return m_xdg_wm_base;
   }
 
-  struct wl_surface* GetBaseSurface() {
-    return m_base_surface;
-  }
-
   [[maybe_unused]] struct agl_shell* GetAglShell() { return m_agl_shell; };
 
   struct wl_shm* GetShm() {
     assert(m_shm);
     return m_shm;
   }
+
+  typedef struct output_info {
+    struct wl_output* output;
+    uint32_t global_id;
+    unsigned width;
+    unsigned height;
+    unsigned physical_width;
+    unsigned physical_height;
+    int refresh_rate;
+    int32_t scale;
+    bool done;
+  } output_info_t;
 
   [[maybe_unused]] void AglShellDoBackground(struct wl_surface*,
                                              size_t index);
@@ -82,6 +90,13 @@ class Display {
 
   bool ActivateSystemCursor([[maybe_unused]] int32_t device,
                             const std::string& kind);
+  bool BufferScaleEnable(void) { return m_buffer_scale_enable; }
+  int32_t GetBufferScale(void) { return m_buffer_scale; }
+  void SetBufferScale(int32_t scale) { m_buffer_scale = scale; }
+  void SetLastBufferScale(int32_t scale) { m_last_buffer_scale = scale; }
+  std::vector<std::shared_ptr<output_info_t>> GetAllOutputs(void) {
+    return m_all_outputs;
+  }
 
   void SetTextInput(std::shared_ptr<TextInput> text_input);
 
@@ -164,18 +179,6 @@ class Display {
 
   std::shared_ptr<TextInput> m_text_input{};
 
-  typedef struct output_info {
-    struct wl_output* output;
-    uint32_t global_id;
-    unsigned width;
-    unsigned height;
-    unsigned physical_width;
-    unsigned physical_height;
-    int refresh_rate;
-    int32_t scale;
-    bool done;
-  } output_info_t;
-
   std::vector<std::shared_ptr<output_info_t>> m_all_outputs;
   int32_t m_buffer_scale;
   int32_t m_last_buffer_scale;
@@ -214,16 +217,6 @@ class Display {
                                    struct wl_output* wl_output,
                                    int scale);
   static void display_handle_done(void* data, struct wl_output* wl_output);
-
-  static const struct wl_surface_listener base_surface_listener;
-
-  static void handle_base_surface_enter(void* data,
-                                           struct wl_surface* wl_surface,
-                                           struct wl_output* output);
-
-  static void handle_base_surface_leave(void *data,
-                                          struct wl_surface *wl_surface,
-                                          struct wl_output *output);
 
   static const struct wl_shm_listener shm_listener;
 
