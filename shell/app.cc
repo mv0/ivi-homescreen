@@ -14,6 +14,7 @@
 
 #include "app.h"
 
+#include <chrono>
 #include <sstream>
 #include <thread>
 
@@ -38,14 +39,10 @@ App::App(const std::string& app_id,
          uint32_t height,
          const std::string& cursor_theme_name)
     : m_gl_resolver(std::make_shared<GlResolver>()),
-      m_display(std::make_shared<Display>(enable_cursor, cursor_theme_name)),
-      m_egl_window {
-  std::make_shared<EglWindow>(0, m_display, EglWindow::WINDOW_BG, app_id,
-                              fullscreen, debug_egl, width, height)
-}
+      m_display(std::make_shared<Display>(enable_cursor, cursor_theme_name))
 #ifdef ENABLE_TEXTURE_TEST
       ,
-      m_texture_test(std::make_unique<TextureTest>(this))
+      m_texture_test(std::make_unique<TextureTest>(this)),
 #endif
 #ifdef ENABLE_PLUGIN_TEXT_INPUT
       ,
@@ -55,8 +52,6 @@ App::App(const std::string& app_id,
 
   FML_DLOG(INFO) << "+App::App";
 
-  m_display->AglShellDoBackground(m_egl_window[0]->GetNativeSurface(), 0);
-
   std::vector<const char*> m_command_line_args_c;
   m_command_line_args_c.reserve(command_line_args.size());
   m_command_line_args_c.push_back(app_id.c_str());
@@ -64,33 +59,87 @@ App::App(const std::string& app_id,
     m_command_line_args_c.push_back(arg.c_str());
   }
 
-  for (size_t i = 0; i < kEngineInstanceCount; i++) {
-    m_flutter_engine[i] = std::make_shared<Engine>(this, i,
-                                                   m_command_line_args_c,
-                                           application_override_path);
-    m_flutter_engine[i]->Run(pthread_self());
+  if (client_shell_ui) {
+    FML_LOG(INFO) << "+App::App client shell enabled";
+    m_egl_window[0] =
+        std::make_shared<EglWindow>(0, m_display, EglWindow::WINDOW_BG, app_id,
+                                    fullscreen, debug_egl, width, height);
 
-    if (!m_flutter_engine[i]->IsRunning()) {
+    m_flutter_engine[0] = std::make_shared<Engine>(
+        this, 0, m_command_line_args_c, application_override_path_bg);
+    m_flutter_engine[0]->Run(pthread_self());
+
+    if (!m_flutter_engine[0]->IsRunning()) {
       FML_LOG(ERROR) << "Failed to Run Engine";
       exit(-1);
     }
-    m_egl_window[i]->SetEngine(m_flutter_engine[i]);
+    m_egl_window[0]->SetEngine(m_flutter_engine[0]);
+    m_display->AglShellDoBackground(m_egl_window[0]->GetNativeSurface(), 0);
 
-    FML_DLOG(INFO) << "(" << i << ") Engine running...";
-  }
+    if (!application_override_path_panel.empty()) {
+      m_egl_window[1] = std::make_shared<EglWindow>(
+          1, m_display, EglWindow::WINDOW_PANEL_TOP, app_id, fullscreen,
+          debug_egl, 218, height);
 
-  // Enable pointer events
-  m_display->SetEngine(m_flutter_engine[0]);
+      m_flutter_engine[1] = std::make_shared<Engine>(
+          this, 1, m_command_line_args_c, application_override_path_panel);
+      m_flutter_engine[1]->Run(pthread_self());
+
+      if (!m_flutter_engine[1]->IsRunning()) {
+        FML_LOG(ERROR) << "Failed to Run Engine";
+        exit(-1);
+      }
+      m_egl_window[1]->SetEngine(m_flutter_engine[1]);
+      m_display->AglShellDoPanel(m_egl_window[1]->GetNativeSurface(),
+                                 AGL_SHELL_EDGE_TOP, 0);
+    }
+
+    // Enable pointer events
+    m_display->SetEngine(m_flutter_engine[0]);
 
 #ifdef ENABLE_TEXTURE_TEST
-  m_texture_test->SetEngine(m_flutter_engine[0]);
+    m_texture_test->SetEngine(m_flutter_engine[0]);
 #endif
+
 #ifdef ENABLE_PLUGIN_TEXT_INPUT
-  m_text_input->SetEngine(m_flutter_engine[0]);
+    m_text_input->SetEngine(m_flutter_engine[0]);
+#endif
+  } else {
+    m_egl_window[0] = std::make_shared<EglWindow>(
+        0, m_display, EglWindow::WINDOW_NORMAL, app_id, fullscreen, debug_egl,
+        width, height);
+
+    m_flutter_engine[0] = std::make_shared<Engine>(
+        this, 0, m_command_line_args_c, application_override_path);
+    m_flutter_engine[0]->Run(pthread_self());
+
+    if (!m_flutter_engine[0]->IsRunning()) {
+      FML_LOG(ERROR) << "Failed to Run Engine";
+      exit(-1);
+    }
+    m_egl_window[0]->SetEngine(m_flutter_engine[0]);
+
+    FML_DLOG(INFO) << "(" << 0 << ") Engine running...";
+
+    // Enable pointer events
+    m_display->SetEngine(m_flutter_engine[0]);
+
+#ifdef ENABLE_TEXTURE_TEST
+    m_texture_test->SetEngine(m_flutter_engine[0]);
+#endif
+
+#ifdef ENABLE_PLUGIN_TEXT_INPUT
+    m_text_input->SetEngine(m_flutter_engine[0]);
+#endif
+  }
+
+#ifdef ENABLE_PLUGIN_TEXT_INPUT
   m_display->SetTextInput(m_text_input);
 #endif
 
-  m_display->AglShellDoReady();
+  if (client_shell_ui) {
+    m_display->AglShellDoReady();
+  }
 
   // init the fps output option.
   m_fps_output = 0;
@@ -144,7 +193,8 @@ int App::Loop() {
                         .count();
 
   for (auto& i : m_flutter_engine) {
-    i->RunTask();
+    if (i && i->IsRunning())
+      i->RunTask();
   }
 
 #ifdef ENABLE_TEXTURE_TEST

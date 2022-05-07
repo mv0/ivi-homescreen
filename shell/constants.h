@@ -56,7 +56,7 @@ static constexpr std::array<char[kSoMaxLength], kSoCount> kGlSoNames[]{
 };
 
 // Engine constants
-constexpr int kEngineInstanceCount = 1;
+constexpr int kEngineInstanceCount = 2;
 
 static constexpr std::array<EGLint, 5> kEglContextAttribs = {{
     // clang-format off
