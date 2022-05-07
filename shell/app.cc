@@ -29,22 +29,20 @@ App::App(const std::string& app_id,
          const std::vector<std::string>& command_line_args,
          const std::string& application_override_path,
          bool fullscreen,
+         const std::string& application_override_path_bg,
+         const std::string& application_override_path_panel,
+         bool client_shell_ui,
          bool enable_cursor,
          bool debug_egl,
          uint32_t width,
          uint32_t height,
          const std::string& cursor_theme_name)
     : m_gl_resolver(std::make_shared<GlResolver>()),
-      m_display(
-          std::make_shared<Display>(enable_cursor, cursor_theme_name)),
-      m_egl_window{std::make_shared<EglWindow>(0,
-                                               m_display,
-                                               EglWindow::WINDOW_BG,
-                                               app_id,
-                                               fullscreen,
-                                               debug_egl,
-                                               width,
-                                               height)}
+      m_display(std::make_shared<Display>(enable_cursor, cursor_theme_name)),
+      m_egl_window {
+  std::make_shared<EglWindow>(0, m_display, EglWindow::WINDOW_BG, app_id,
+                              fullscreen, debug_egl, width, height)
+}
 #ifdef ENABLE_TEXTURE_TEST
       ,
       m_texture_test(std::make_unique<TextureTest>(this))

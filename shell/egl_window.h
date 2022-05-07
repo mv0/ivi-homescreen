@@ -38,7 +38,17 @@ class Engine;
 
 class EglWindow : public Egl {
  public:
-  enum window_type { WINDOW_NORMAL, WINDOW_BG, WINDOW_TOP, WINDOW_BOTTOM };
+  // a window normal is a regular application window_bg, window_panel are part
+  // of the client shell UI for AGL for window_panel only the width has any
+  // meaningful data, while window_bg will literally be the entire output
+  enum window_type {
+    WINDOW_NORMAL,
+    WINDOW_BG,
+    WINDOW_PANEL_TOP,
+    WINDOW_PANEL_BOTTOM,
+    WINDOW_PANEL_LEFT,
+    WINDOW_PANEL_RIGHT
+  };
 
   EglWindow(size_t index,
             const std::shared_ptr<Display>& display,

@@ -35,10 +35,13 @@ int main(int argc, char** argv) {
   }
 
   std::string application_override_path;
+  std::string application_override_path_bg;
+  std::string application_override_path_panel;
   std::string cursor_theme;
   bool disable_cursor = false;
   bool debug_egl = false;
   bool fullscreen = false;
+  bool client_shell_ui = false;
   uint32_t width = 0;
   uint32_t height = 0;
 
@@ -54,6 +57,36 @@ int main(int argc, char** argv) {
       }
       FML_DLOG(INFO) << "Override Assets Path: " << application_override_path;
       auto find = "--a=" + application_override_path;
+      auto result = std::find(args.begin(), args.end(), find);
+      if (result != args.end()) {
+        args.erase(result);
+      }
+    }
+    if (cl.HasOption("p")) {
+      cl.GetOptionValue("p", &application_override_path_panel);
+      if (application_override_path_panel.empty()) {
+        FML_LOG(ERROR) << "--p option requires an argument (e.g. "
+                          "--panel=/usr/share/gallery)";
+        return 1;
+      }
+      FML_DLOG(INFO) << "Override Assets Path Panel: "
+                     << application_override_path_panel;
+      auto find = "--p=" + application_override_path_panel;
+      auto result = std::find(args.begin(), args.end(), find);
+      if (result != args.end()) {
+        args.erase(result);
+      }
+    }
+    if (cl.HasOption("b")) {
+      cl.GetOptionValue("b", &application_override_path_bg);
+      if (application_override_path_bg.empty()) {
+        FML_LOG(ERROR) << "--b option requires an argument (e.g. "
+                          "--background=/usr/share/gallery)";
+        return 1;
+      }
+      FML_DLOG(INFO) << "Override Assets Path Background: "
+                     << application_override_path_bg;
+      auto find = "--b=" + application_override_path_bg;
       auto result = std::find(args.begin(), args.end(), find);
       if (result != args.end()) {
         args.erase(result);
@@ -79,6 +112,14 @@ int main(int argc, char** argv) {
       FML_DLOG(INFO) << "Fullscreen";
       fullscreen = true;
       auto result = std::find(args.begin(), args.end(), "--f");
+      if (result != args.end()) {
+        args.erase(result);
+      }
+    }
+    if (cl.HasOption("s")) {
+      FML_DLOG(INFO) << "Client Shell UI";
+      client_shell_ui = true;
+      auto result = std::find(args.begin(), args.end(), "--s");
       if (result != args.end()) {
         args.erase(result);
       }
@@ -135,7 +176,9 @@ int main(int argc, char** argv) {
   FML_DLOG(INFO) << "Screen Height: " << height;
 
   App app("homescreen", args, application_override_path, fullscreen,
-          !disable_cursor, debug_egl, width, height, cursor_theme);
+          application_override_path_bg, application_override_path_panel,
+          client_shell_ui, !disable_cursor, debug_egl, width, height,
+          cursor_theme);
 
   std::signal(SIGINT, SignalHandler);
 
