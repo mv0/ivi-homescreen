@@ -75,7 +75,31 @@ EglWindow::EglWindow(size_t index,
   m_callback = wl_surface_frame(m_base_surface);
   wl_callback_add_listener(m_callback, &frame_listener, this);
 
+  m_wait_for_configure = true;
   wl_surface_commit(m_base_surface);
+
+  /* we already have wait_for_configure set after create_surface() */
+  while (m_wait_for_configure) {
+    int ret = wl_display_dispatch(m_display->GetDisplay());
+
+    /* wait until xdg_surface::configure acks the new dimensions */
+    if (m_wait_for_configure)
+      continue;
+
+    m_egl_window[m_index] = wl_egl_window_create(
+        m_base_surface, m_geometry.width, m_geometry.height);
+
+    m_egl_surface[m_index] =
+        create_egl_surface(this, m_egl_window[m_index], nullptr);
+
+    if (m_flutter_engine) {
+      auto result =
+          m_flutter_engine->SetWindowSize(m_geometry.height, m_geometry.width);
+      if (result != kSuccess) {
+        FML_LOG(ERROR) << "Failed to set Flutter Engine Window Size";
+      }
+    }
+  }
 
   FML_DLOG(INFO) << "- EglWindow()";
 }
@@ -289,8 +313,9 @@ int EglWindow::create_shm_buffer(Display* display,
 void EglWindow::handle_xdg_surface_configure(void* data,
                                              struct xdg_surface* xdg_surface,
                                              uint32_t serial) {
-  (void)data;
+  auto* w = reinterpret_cast<EglWindow*>(data);
   xdg_surface_ack_configure(xdg_surface, serial);
+  w->m_wait_for_configure = false;
 }
 
 const struct xdg_surface_listener EglWindow::xdg_surface_listener = {
@@ -351,20 +376,6 @@ void EglWindow::handle_toplevel_configure(void* data,
     }
     wl_egl_window_resize(w->m_egl_window[w->m_index], w->m_geometry.width,
                          w->m_geometry.height, 0, 0);
-  } else {
-    w->m_egl_window[w->m_index] = wl_egl_window_create(
-        w->m_base_surface, w->m_geometry.width, w->m_geometry.height);
-
-    w->m_egl_surface[w->m_index] =
-        create_egl_surface(w, w->m_egl_window[w->m_index], nullptr);
-
-    if (w->m_flutter_engine) {
-      auto result = w->m_flutter_engine->SetWindowSize(w->m_geometry.height,
-                                                       w->m_geometry.width);
-      if (result != kSuccess) {
-        FML_LOG(ERROR) << "Failed to set Flutter Engine Window Size";
-      }
-    }
   }
 }
 
