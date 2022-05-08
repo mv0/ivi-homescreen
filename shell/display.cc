@@ -26,13 +26,15 @@
 #include "constants.h"
 #include "engine.h"
 
-Display::Display(bool enable_cursor,
+Display::Display(bool client_shell_ui,
+                 bool enable_cursor,
                  std::string cursor_theme_name)
     : m_xkb_context(xkb_context_new(XKB_CONTEXT_NO_FLAGS)),
       m_buffer_scale(1),
       m_last_buffer_scale(m_buffer_scale),
       m_enable_cursor(enable_cursor),
-      m_cursor_theme_name(std::move(cursor_theme_name)) {
+      m_cursor_theme_name(std::move(cursor_theme_name)),
+      m_client_shell_ui(client_shell_ui) {
   FML_DLOG(INFO) << "+ Display()";
 
   m_display = wl_display_connect(nullptr);
@@ -172,7 +174,8 @@ void Display::registry_handle_global(
     wl_seat_add_listener(d->m_seat, &seat_listener, d);
   }
 
-  else if (strcmp(interface, agl_shell_interface.name) == 0) {
+  else if (d->m_client_shell_ui &&
+           strcmp(interface, agl_shell_interface.name) == 0) {
     d->m_agl_shell = static_cast<struct agl_shell*>(
         wl_registry_bind(registry, name,
                          &agl_shell_interface,

@@ -43,6 +43,9 @@ class Egl {
   bool SwapBuffers(size_t index);
   bool MakeResourceCurrent(size_t index);
   bool MakeTextureCurrent();
+  bool IsFirstBufferSwapped(size_t index) {
+    return m_first_buffer_swapped[index];
+  }
 
  protected:
   EGLSurface m_egl_surface[kEngineInstanceCount]{};
@@ -64,6 +67,7 @@ class Egl {
   EGLint m_minor{};
 
   int m_buffer_size;
+  bool m_first_buffer_swapped[kEngineInstanceCount]{};
 
   PFNEGLDEBUGMESSAGECONTROLKHRPROC m_pfDebugMessageControl;
   PFNEGLQUERYDEBUGKHRPROC m_pfQueryDebug;

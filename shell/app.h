@@ -68,6 +68,8 @@ class App {
   const App& operator=(const App&) = delete;
 
   GlResolver* GetGlResolver();
+  bool m_client_shell_ready{};
+  bool m_client_shell_ui{};
 
   std::shared_ptr<EglWindow> GetEglWindow(size_t index) {
     return m_egl_window[index];

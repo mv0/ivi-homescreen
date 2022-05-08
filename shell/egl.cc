@@ -642,7 +642,6 @@ struct egl_config_attribute egl_config_attributes[] = {
 
 bool Egl::MakeCurrent(size_t index) {
   // FML_DLOG(INFO) << "(" << index << ") Egl::MakeCurrent";
-
   eglMakeCurrent(m_dpy, m_egl_surface[index], m_egl_surface[index],
                  m_context[index]);
   EGLint egl_error = eglGetError();
@@ -654,7 +653,7 @@ bool Egl::MakeCurrent(size_t index) {
 }
 
 bool Egl::ClearCurrent() {
-  // FML_DLOG(INFO) << "(" << index << ") Egl::ClearCurrent";
+  // FML_DLOG(INFO) << "Egl::ClearCurrent";
   eglMakeCurrent(m_dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
   EGLint egl_error = eglGetError();
   if (egl_error != EGL_SUCCESS) {
@@ -672,6 +671,10 @@ bool Egl::SwapBuffers(size_t index) {
     FML_LOG(ERROR) << "(" << index << ") SwapBuffers failed: " << egl_error;
     assert(false);
   }
+
+  if (!m_first_buffer_swapped[index])
+    m_first_buffer_swapped[index] = true;
+
   return true;
 }
 

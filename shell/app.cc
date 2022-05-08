@@ -39,7 +39,10 @@ App::App(const std::string& app_id,
          uint32_t height,
          const std::string& cursor_theme_name)
     : m_gl_resolver(std::make_shared<GlResolver>()),
-      m_display(std::make_shared<Display>(enable_cursor, cursor_theme_name))
+      m_display(std::make_shared<Display>(client_shell_ui,
+                                          enable_cursor,
+                                          cursor_theme_name)),
+      m_client_shell_ui(client_shell_ui)
 #ifdef ENABLE_TEXTURE_TEST
       ,
       m_texture_test(std::make_unique<TextureTest>(this)),
@@ -60,7 +63,6 @@ App::App(const std::string& app_id,
   }
 
   if (client_shell_ui) {
-    FML_LOG(INFO) << "+App::App client shell enabled";
     m_egl_window[0] =
         std::make_shared<EglWindow>(0, m_display, EglWindow::WINDOW_BG, app_id,
                                     fullscreen, debug_egl, width, height);
@@ -74,12 +76,11 @@ App::App(const std::string& app_id,
       exit(-1);
     }
     m_egl_window[0]->SetEngine(m_flutter_engine[0]);
-    m_display->AglShellDoBackground(m_egl_window[0]->GetNativeSurface(), 0);
 
     if (!application_override_path_panel.empty()) {
       m_egl_window[1] = std::make_shared<EglWindow>(
           1, m_display, EglWindow::WINDOW_PANEL_TOP, app_id, fullscreen,
-          debug_egl, 218, height);
+          debug_egl, width, 418);
 
       m_flutter_engine[1] = std::make_shared<Engine>(
           this, 1, m_command_line_args_c, application_override_path_panel);
@@ -90,19 +91,18 @@ App::App(const std::string& app_id,
         exit(-1);
       }
       m_egl_window[1]->SetEngine(m_flutter_engine[1]);
-      m_display->AglShellDoPanel(m_egl_window[1]->GetNativeSurface(),
-                                 AGL_SHELL_EDGE_TOP, 0);
     }
 
     // Enable pointer events
-    m_display->SetEngine(m_flutter_engine[0]);
+    m_display->SetEngine(m_flutter_engine[1]);
 
 #ifdef ENABLE_TEXTURE_TEST
-    m_texture_test->SetEngine(m_flutter_engine[0]);
+    m_texture_test->SetEngine(m_flutter_engine[1]);
 #endif
 
 #ifdef ENABLE_PLUGIN_TEXT_INPUT
-    m_text_input->SetEngine(m_flutter_engine[0]);
+    m_text_input->SetEngine(m_flutter_engine[1]);
+
 #endif
   } else {
     m_egl_window[0] = std::make_shared<EglWindow>(
@@ -123,7 +123,6 @@ App::App(const std::string& app_id,
 
     // Enable pointer events
     m_display->SetEngine(m_flutter_engine[0]);
-
 #ifdef ENABLE_TEXTURE_TEST
     m_texture_test->SetEngine(m_flutter_engine[0]);
 #endif
@@ -136,10 +135,6 @@ App::App(const std::string& app_id,
 #ifdef ENABLE_PLUGIN_TEXT_INPUT
   m_display->SetTextInput(m_text_input);
 #endif
-
-  if (client_shell_ui) {
-    m_display->AglShellDoReady();
-  }
 
   // init the fps output option.
   m_fps_output = 0;
@@ -246,6 +241,18 @@ int App::Loop() {
       }
     }
   }
+
+  // we can now send ready, all windows have swapped their buffers, meaning
+  // that we did wl_surface.commit() with the dimensions.
+  if (m_client_shell_ui && !m_client_shell_ready) {
+    for (size_t i = 0; i < kEngineInstanceCount; i++) {
+      if (m_egl_window[i]->IsFirstBufferSwapped(i)) {
+        m_display->AglShellDoReady();
+        m_client_shell_ready = true;
+      }
+    }
+  }
+
   return ret;
 }
 

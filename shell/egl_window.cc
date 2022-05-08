@@ -26,7 +26,6 @@
 #include "display.h"
 #include "engine.h"
 
-
 EglWindow::EglWindow(size_t index,
                      const std::shared_ptr<Display>& display,
                      enum window_type type,
@@ -40,6 +39,7 @@ EglWindow::EglWindow(size_t index,
       m_display(display),
       m_flutter_engine(nullptr),
       m_geometry({width, height}),
+      m_window_size({width, height}),
       m_type(type),
       m_app_id(std::move(app_id)),
       m_fullscreen(fullscreen),
@@ -78,7 +78,13 @@ EglWindow::EglWindow(size_t index,
   m_wait_for_configure = true;
   wl_surface_commit(m_base_surface);
 
-  /* we already have wait_for_configure set after create_surface() */
+  if (type == WINDOW_BG)
+    m_display->AglShellDoBackground(m_base_surface, 0);
+  else if (type == WINDOW_PANEL_TOP)
+    m_display->AglShellDoPanel(m_base_surface, AGL_SHELL_EDGE_TOP, 0);
+  else if (type == WINDOW_PANEL_BOTTOM)
+    m_display->AglShellDoPanel(m_base_surface, AGL_SHELL_EDGE_BOTTOM, 0);
+
   while (m_wait_for_configure) {
     int ret = wl_display_dispatch(m_display->GetDisplay());
 
@@ -365,7 +371,11 @@ void EglWindow::handle_toplevel_configure(void* data,
     w->m_geometry.height = w->m_window_size.height;
   }
 
+
   if (w->m_egl_window[w->m_index]) {
+    wl_egl_window_resize(w->m_egl_window[w->m_index], w->m_geometry.width,
+                         w->m_geometry.height, 0, 0);
+
     if (w->m_flutter_engine) {
       auto result = w->m_flutter_engine->SetWindowSize(
           w->m_geometry.height,
@@ -374,8 +384,6 @@ void EglWindow::handle_toplevel_configure(void* data,
         FML_LOG(ERROR) << "Failed to set Flutter Engine Window Size";
       }
     }
-    wl_egl_window_resize(w->m_egl_window[w->m_index], w->m_geometry.width,
-                         w->m_geometry.height, 0, 0);
   }
 }
 

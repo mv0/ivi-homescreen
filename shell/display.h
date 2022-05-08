@@ -36,7 +36,9 @@ class Engine;
 
 class Display {
  public:
-  explicit Display(bool enable_cursor, std::string cursor_theme_name);
+  explicit Display(bool client_shell_ui,
+                   bool enable_cursor,
+                   std::string cursor_theme_name);
   ~Display();
   Display(const Display&) = delete;
   const Display& operator=(const Display&) = delete;
@@ -115,6 +117,7 @@ class Display {
 
   struct agl_shell* m_agl_shell{};
   struct xdg_wm_base* m_xdg_wm_base{};
+  bool m_client_shell_ui{};
 
   bool m_enable_cursor;
   struct wl_surface* m_cursor_surface{};
