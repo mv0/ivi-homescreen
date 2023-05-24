@@ -61,6 +61,23 @@ Display::Display(bool enable_cursor,
     FML_LOG(INFO) << "agl_shell extension not present";
   }
 
+  if (m_bind_to_agl_shell) {
+    int ret = 0;
+
+    while (ret != -1 && wait_for_bound) {
+      ret = wl_display_dispatch(m_display);
+
+      if (wait_for_bound)
+        continue;
+    }
+
+    if (!bound_ok) {
+      FML_DLOG(ERROR) << "agl_shell extension already in "
+                         "use by other shell client.";
+      exit(EXIT_FAILURE);
+    }
+  }
+
   FML_DLOG(INFO) << "- Display()";
 }
 
@@ -104,6 +121,25 @@ static void xdg_wm_base_ping(void* data,
 
 static const struct xdg_wm_base_listener xdg_wm_base_listener = {
     .ping = xdg_wm_base_ping,
+};
+
+void Display::agl_shell_bound_ok(void* data, struct agl_shell* agl_shell) {
+  auto* d = static_cast<Display*>(data);
+  d->wait_for_bound = false;
+
+  d->bound_ok = true;
+}
+
+void Display::agl_shell_bound_fail(void* data, struct agl_shell* agl_shell) {
+  auto* d = static_cast<Display*>(data);
+  d->wait_for_bound = false;
+
+  d->bound_ok = false;
+}
+
+const struct agl_shell_listener Display::shell_listener = {
+    agl_shell_bound_ok,
+    agl_shell_bound_fail,
 };
 
 void Display::registry_handle_global(void* data,
@@ -167,7 +203,8 @@ void Display::registry_handle_global(void* data,
              d->m_bind_to_agl_shell) {
     d->m_agl_shell = static_cast<struct agl_shell*>(
         wl_registry_bind(registry, name, &agl_shell_interface,
-                         std::min(static_cast<uint32_t>(1), version)));
+                         std::min(static_cast<uint32_t>(2), version)));
+    agl_shell_add_listener(d->m_agl_shell, &shell_listener, d);
   }
 }
 

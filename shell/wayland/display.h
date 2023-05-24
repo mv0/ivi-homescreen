@@ -104,6 +104,8 @@ class Display {
   struct wl_surface* m_base_surface{};
 
   bool m_bind_to_agl_shell = false;
+  bool wait_for_bound = true;
+  bool bound_ok = false;
 
   std::map<wl_surface*, Engine*> m_surface_engine_map;
   wl_surface* m_active_surface{};
@@ -376,4 +378,8 @@ class Display {
   static void touch_handle_frame(void* data, struct wl_touch* wl_touch);
 
   static const struct wl_touch_listener touch_listener;
+
+  static void agl_shell_bound_ok(void* data, struct agl_shell* agl_shell);
+  static void agl_shell_bound_fail(void* data, struct agl_shell* agl_shell);
+  static const struct agl_shell_listener shell_listener;
 };
