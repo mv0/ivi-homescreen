@@ -101,4 +101,9 @@ if (BUILD_PLUGIN_SECURE_STORAGE)
     pkg_check_modules(PLUGIN_SECURE_STORAGE REQUIRED libsecret-1)
 endif ()
 
+option(BUILD_PLUGIN_AGL_SHELL "Includes AGL Shell Wayland Protocol Plugin" OFF)
+if (BUILD_PLUGIN_AGL_SHELL)
+    ENABLE_PLUGIN(agl_shell)
+endif ()
+
 message(STATUS "Plugin Config .......... ${PLUGINS}")

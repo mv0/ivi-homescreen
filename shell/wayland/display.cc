@@ -697,6 +697,14 @@ void Display::AglShellDoPanel(struct wl_surface* surface,
   }
 }
 
+void Display::AglShellDoActivate(const std::string& app_id,
+                                 size_t index) {
+  if (m_agl_shell) {
+    agl_shell_activate_app(m_agl_shell, app_id.c_str(),
+                           m_all_outputs[index]->output);
+  }
+}
+
 void Display::AglShellDoReady() {
   if (m_agl_shell) {
     agl_shell_ready(m_agl_shell);

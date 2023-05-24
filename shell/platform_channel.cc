@@ -53,6 +53,9 @@
 #ifdef ENABLE_PLUGIN_SECURE_STORAGE
 #include "static_plugins/secure_storage/secure_storage.h"
 #endif
+#ifdef ENABLE_PLUGIN_AGL_SHELL
+#include "static_plugins/agl_shell/agl_shell.h"
+#endif
 
 PlatformChannel* PlatformChannel::singleton = nullptr;
 
@@ -100,5 +103,8 @@ PlatformChannel::PlatformChannel() {
 #ifdef ENABLE_PLUGIN_SECURE_STORAGE
   RegisterCallback(SecureStorage::kChannelName,
                    &SecureStorage::OnPlatformMessage);
+#endif
+#ifdef ENABLE_PLUGIN_AGL_SHELL
+  RegisterCallback(AglShell::kChannelName, &AglShell::OnPlatformMessage);
 #endif
 }

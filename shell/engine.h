@@ -50,6 +50,12 @@ class TextInput;
 
 #endif
 
+#if ENABLE_PLUGIN_AGL_SHELL
+
+class Display;
+
+#endif
+
 class Engine {
  public:
   Engine(FlutterView* view,
@@ -144,6 +150,10 @@ class Engine {
 
   MAYBE_UNUSED NODISCARD TextInput* GetTextInput() const;
 
+#endif
+
+#if ENABLE_PLUGIN_AGL_SHELL
+  std::shared_ptr<Display> GetDisplay() const;
 #endif
 
   Backend* GetBackend() {

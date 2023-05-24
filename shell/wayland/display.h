@@ -82,6 +82,9 @@ class Display {
                        enum agl_shell_edge mode,
                        size_t index);
 
+  void AglShellDoActivate(const std::string& app_id,
+                          size_t index);
+
   void AglShellDoReady();
 
   void SetEngine(wl_surface* surface, Engine* engine);

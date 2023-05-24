@@ -595,3 +595,9 @@ MAYBE_UNUSED TextInput* Engine::GetTextInput() const {
 }
 
 #endif
+
+#if ENABLE_PLUGIN_AGL_SHELL
+std::shared_ptr<Display> Engine::GetDisplay() const {
+  return m_egl_window->GetDisplay();
+}
+#endif
