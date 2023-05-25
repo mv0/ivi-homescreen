@@ -381,5 +381,9 @@ class Display {
 
   static void agl_shell_bound_ok(void* data, struct agl_shell* agl_shell);
   static void agl_shell_bound_fail(void* data, struct agl_shell* agl_shell);
+  static void agl_shell_app_state(void* data,
+                                  struct agl_shell* agl_shell,
+                                  const char* app_id,
+                                  uint32_t state);
   static const struct agl_shell_listener shell_listener;
 };
