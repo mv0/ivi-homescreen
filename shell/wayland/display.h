@@ -86,6 +86,8 @@ class Display {
                           size_t index);
 
   void AglShellDoReady();
+  // the index is for the output
+  void AglShellDoSetupActivationArea(int x, int y, size_t index);
 
   void SetEngine(wl_surface* surface, Engine* engine);
 
