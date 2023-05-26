@@ -192,6 +192,7 @@ class Display {
     MAYBE_UNUSED int refresh_rate;
     int32_t scale;
     bool done;
+    int transform;
   } output_info_t;
 
   std::vector<std::shared_ptr<output_info_t>> m_all_outputs;

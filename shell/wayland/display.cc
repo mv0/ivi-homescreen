@@ -270,11 +270,11 @@ void Display::display_handle_geometry(void* data,
   (void)subpixel;
   (void)make;
   (void)model;
-  (void)transform;
 
   auto* oi = static_cast<output_info_t*>(data);
   oi->physical_width = physical_width;
   oi->physical_height = physical_height;
+  oi->transform = transform;
 
   FML_DLOG(INFO) << "Physical width: " << physical_width << " mm x "
                  << physical_height << " mm";
