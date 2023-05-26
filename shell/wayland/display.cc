@@ -289,9 +289,12 @@ void Display::display_handle_mode(void* data,
   (void)wl_output;
   (void)flags;
   auto* oi = static_cast<output_info_t*>(data);
-  oi->width = width;
-  oi->height = height;
-  oi->refresh_rate = refresh;
+
+  if (flags == WL_OUTPUT_MODE_CURRENT) {
+    oi->width = width;
+    oi->height = height;
+    oi->refresh_rate = refresh;
+  }
 
   FML_DLOG(INFO) << "Video mode: " << width << " x " << height << " @ "
                  << (refresh > 1000 ? refresh / 1000.0 : (double)refresh)
