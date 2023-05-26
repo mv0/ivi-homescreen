@@ -60,6 +60,8 @@ class WaylandWindow {
                 bool fullscreen,
                 int32_t width,
                 int32_t height,
+                uint32_t activation_area_x,
+                uint32_t activation_area_y,
                 Backend* backend);
 
   ~WaylandWindow();
@@ -106,6 +108,10 @@ class WaylandWindow {
     int32_t width;
     int32_t height;
   } m_geometry;
+  struct {
+    uint32_t x;
+    uint32_t y;
+  } m_activation_area;
   struct {
     int32_t width;
     int32_t height;

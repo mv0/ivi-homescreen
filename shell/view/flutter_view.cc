@@ -40,6 +40,7 @@ FlutterView::FlutterView(Configuration::Config config,
   m_wayland_window = std::make_shared<WaylandWindow>(
       m_index, display, m_config.view.window_type, m_config.app_id,
       m_config.view.fullscreen, m_config.view.width, m_config.view.height,
+      m_config.view.activation_area_x, m_config.view.activation_area_y,
       m_backend.get());
 
 #ifdef ENABLE_TEXTURE_TEST_EGL
