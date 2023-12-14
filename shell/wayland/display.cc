@@ -21,12 +21,85 @@
 #include <xkbcommon/xkbcommon.h>
 #include <algorithm>
 #include <cerrno>
+#include <chrono>
 #include <cstring>
 #include <utility>
 
 #include "constants.h"
 #include "engine.h"
 #include "timer.h"
+
+using namespace std::chrono_literals;
+
+void Display::test_bind_to_agl_shell(void) {
+  int ret = 0;
+  int retries = 5;
+
+  if (!m_agl.shell || !m_agl.bind_to_agl_shell)
+    return;
+
+  if (m_agl.version < 8)
+    return;
+
+  // this is the fast path, we get immediately a bound_ok event
+  while (ret != -1 && m_agl.wait_for_bound) {
+    ret = wl_display_dispatch(m_display);
+    if (m_agl.wait_for_bound)
+      continue;
+  }
+
+  if (m_agl.bound_ok) {
+    FML_LOG(INFO) << "agl_shell: bound_ok (fast)";
+    return;
+  }
+
+  // destroy agl_shell object and retry again
+  agl_shell_destroy(m_agl.shell);
+  wl_display_flush(m_display);
+
+  FML_LOG(INFO) << "agl_shell: Retrying to bind to agl_shell (slow)";
+  do {
+    for (std::list<GlobalName>::iterator it = m_global_list.begin();
+         it != m_global_list.end(); it++) {
+      if (it->interface_name == "agl_shell") {
+        m_agl.shell = static_cast<struct agl_shell*>(
+            wl_registry_bind(m_registry, it->id, &agl_shell_interface,
+                             std::min(static_cast<uint32_t>(8), it->version)));
+        agl_shell_add_listener(m_agl.shell, &agl_shell_listener, this);
+        wl_display_dispatch(m_display);
+        m_agl.wait_for_bound = true;
+
+        FML_LOG(INFO) << "agl_shell: re-binding again to agl-shell";
+        break;
+      }
+    }
+
+    while (ret != -1 && m_agl.wait_for_bound) {
+      ret = wl_display_dispatch(m_display);
+      if (m_agl.wait_for_bound)
+        continue;
+    }
+
+    if (m_agl.bound_ok) {
+      FML_LOG(INFO) << "agl_shell: bound_ok (slow)";
+      return;
+    }
+
+    agl_shell_destroy(m_agl.shell);
+    wl_display_flush(m_display);
+
+    FML_LOG(INFO) << "agl_shell: Retrying again (retries = " << retries << ")";
+
+    std::this_thread::sleep_for(500ms);
+  } while (retries-- > 0);
+
+  // if not by this time we still couldn't get it, so abort/exit
+  if (!m_agl.bound_ok) {
+    spdlog::critical(
+        "agl_shell: extension already in use by other shell client.");
+    exit(EXIT_FAILURE);
+  }
+}
 
 Display::Display(bool enable_cursor,
                  const std::string& ignore_wayland_event,
@@ -59,23 +132,7 @@ Display::Display(bool enable_cursor,
   wl_registry_add_listener(m_registry, &registry_listener, this);
   wl_display_dispatch(m_display);
 
-  if (m_agl.shell && m_agl.bind_to_agl_shell && m_agl.version >= 2) {
-    int ret = 0;
-    while (ret != -1 && m_agl.wait_for_bound) {
-      ret = wl_display_dispatch(m_display);
-      if (m_agl.wait_for_bound)
-        continue;
-    }
-    if (!m_agl.bound_ok) {
-      spdlog::critical(
-          "agl_shell extension already in use by other shell client.");
-      exit(EXIT_FAILURE);
-    }
-  }
-
-  if (!m_agl.shell && m_agl.bind_to_agl_shell) {
-    spdlog::info("agl_shell extension not present");
-  }
+  test_bind_to_agl_shell();
 
   SPDLOG_TRACE("- Display()");
 }
@@ -142,6 +199,12 @@ void Display::registry_handle_global(void* data,
                                      const char* interface,
                                      uint32_t version) {
   auto* d = static_cast<Display*>(data);
+
+  struct GlobalName global;
+  global.id = name;
+  global.version = version;
+  global.interface_name = std::string(interface);
+  d->m_global_list.push_back(global);
 
   SPDLOG_DEBUG("Wayland: {} version {}", interface, version);
 
@@ -245,9 +308,15 @@ void Display::registry_handle_global(void* data,
 #endif
 }
 
-void Display::registry_handle_global_remove(void* /* data */,
+void Display::registry_handle_global_remove(void* data,
                                             struct wl_registry* /* reg */,
-                                            uint32_t /* id */) {}
+                                            uint32_t /* id */) {
+  auto* d = static_cast<Display*>(data);
+  for (std::list<GlobalName>::iterator it = d->m_global_list.begin();
+       it != d->m_global_list.end(); it++) {
+    d->m_global_list.erase(it);
+  }
+}
 
 const struct wl_registry_listener Display::registry_listener = {
     registry_handle_global,
@@ -971,6 +1040,8 @@ void Display::agl_shell_bound_ok(void* data, struct agl_shell* shell) {
   auto* d = static_cast<Display*>(data);
   d->m_agl.wait_for_bound = false;
   d->m_agl.bound_ok = true;
+
+  FML_LOG(INFO) << "agl_shell: bound_ok event";
 }
 
 void Display::agl_shell_bound_fail(void* data, struct agl_shell* shell) {
@@ -978,6 +1049,8 @@ void Display::agl_shell_bound_fail(void* data, struct agl_shell* shell) {
   auto* d = static_cast<Display*>(data);
   d->m_agl.wait_for_bound = false;
   d->m_agl.bound_ok = false;
+
+  FML_LOG(INFO) << "agl_shell: bound_fail event";
 }
 
 void Display::addAppToStack(std::string app_id) {

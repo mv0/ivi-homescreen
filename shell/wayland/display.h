@@ -43,6 +43,12 @@
 
 class Engine;
 
+struct GlobalName {
+  int id;
+  uint32_t version;
+  std::string interface_name;
+};
+
 class Display {
  public:
   explicit Display(bool enable_cursor,
@@ -312,6 +318,7 @@ class Display {
 
  private:
   std::shared_ptr<Engine> m_flutter_engine;
+  std::list<GlobalName> m_global_list;
 
   struct wl_display* m_display{};
   struct wl_registry* m_registry{};
@@ -335,7 +342,7 @@ class Display {
     struct agl_shell* shell{};
 
     bool wait_for_bound = true;
-    bool bound_ok{};
+    bool bound_ok = false;
     uint32_t version = 0;
   } m_agl;
 
@@ -438,6 +445,8 @@ class Display {
 
   std::mutex m_lock;
   uint32_t m_repeat_code{};
+
+  void test_bind_to_agl_shell(void);
 
   /**
    * @brief set repeat code
